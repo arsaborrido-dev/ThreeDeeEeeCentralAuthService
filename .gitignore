@@ -1,0 +1,67 @@
+# Build results
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio cache
+.vs/
+
+# IIS Express
+iisexpress/
+
+# Logs
+*.log
+logs/
+
+# NuGet packages
+*.nupkg
+packages/
+*.snupkg
+
+# Publish output
+publish/
+out/
+
+# Environment variables
+.env
+*.env
+.env.*
+
+# App settings (environment-specific only)
+appsettings.Development.json
+appsettings.Local.json
+appsettings.Staging.json
+appsettings.Production.json
+
+# Docker
+docker-compose.override.yml
+docker-compose.local.yml
+docker-compose.dev.yml
+docker-compose.*.yml
+*.dockerignore
+
+# Docker volumes / data
+data/
+*/data/
+
+# Secrets
+secrets/
+*.secret
+*.key
+*.pem
+
+# Rider / VS Code
+.idea/
+.vscode/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Node modules (if using frontend)
+node_modules/

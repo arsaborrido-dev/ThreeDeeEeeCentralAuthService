@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="../docker-compose.yml" />
+    <File Path=".gitignore" />
+  </Folder>
+  <Project Path="AuthApi/AuthApi.csproj" Id="a4c9441d-c14d-4ab2-a848-b008320131a9" />
+</Solution>
