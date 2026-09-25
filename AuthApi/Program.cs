@@ -308,7 +308,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
-
 static async Task SeedDatabaseAsync(WebApplication app)
 {
     using var scope = app.Services.CreateScope();
