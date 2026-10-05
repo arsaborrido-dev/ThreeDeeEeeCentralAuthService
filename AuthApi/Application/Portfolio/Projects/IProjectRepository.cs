@@ -1,17 +1,14 @@
-﻿using AuthApi.Domain.Entitities.Portfolio;
+﻿using AuthApi.Application.Portfolio.Projects.DTOs;
+using AuthApi.Domain.Entitities.Portfolio;
 
-namespace AuthApi.Application.Portfolio.Projects
+namespace AuthApi.Application.Portfolio.Projects;
+public interface IProjectRepository
 {
-    public interface IProjectRepository
-    {
-        Task<List<Project>> GetAllProjectsAsync(
-            CancellationToken cancellationToken = default);
-
-        Task<Project?> GetProjectByIdAsync(
-            int id,
-            CancellationToken cancellationToken = default);
-
-        Task<List<Project>> GetFeaturedProjectsAsync(
-            CancellationToken cancellationToken = default);
-    }
+    Task<List<ProjectResponse>> GetAllProjectsAsync(
+        CancellationToken cancellationToken = default);
+    Task<ProjectResponse?> GetProjectByIdAsync(
+        long id,
+        CancellationToken cancellationToken = default);
+    Task<List<ProjectResponse>> GetFeaturedProjectsAsync(
+        CancellationToken cancellationToken = default);
 }

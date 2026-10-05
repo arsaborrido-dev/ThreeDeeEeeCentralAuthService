@@ -1,7 +1,5 @@
-﻿namespace AuthApi.Infrastracture.Captcha
+﻿namespace AuthApi.Infrastracture.Captcha;
+public class CaptchaSettings
 {
-    public class CaptchaSettings
-    {
-        public string SecretKey { get; set; } = null!;
-    }
+    public string SecretKey { get; set; } = null!;
 }

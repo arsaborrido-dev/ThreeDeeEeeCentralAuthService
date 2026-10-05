@@ -179,6 +179,10 @@ namespace AuthApi.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ProjectDemonstration")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("ShortDescription")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -207,6 +211,7 @@ namespace AuthApi.Migrations
                             IsFeatured = true,
                             LiveDemoUrl = "",
                             LongDescription = "Full MVC site with EF Core, Identity, and admin dashboard.",
+                            ProjectDemonstration = "",
                             ShortDescription = "A personal portfolio built with ASP.NET MVC.",
                             ThumbnailImageUrl = "/images/projects/portfolio-thumb.png",
                             Title = "Portfolio Website"
@@ -220,6 +225,7 @@ namespace AuthApi.Migrations
                             IsFeatured = true,
                             LiveDemoUrl = "",
                             LongDescription = "Includes DAX measures, drill-through, and bookmarks.",
+                            ProjectDemonstration = "",
                             ShortDescription = "Interactive dashboard for sales analytics.",
                             ThumbnailImageUrl = "/images/projects/powerbi-thumb.png",
                             Title = "Power BI Sales Dashboard"
@@ -287,69 +293,264 @@ namespace AuthApi.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<long>("SkillCategoryId")
+                        .HasColumnType("bigint");
+
                     b.HasKey("SkillId");
 
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Skills");
+                    b.HasIndex("SkillCategoryId");
+
+                    b.ToTable("Skills", (string)null);
 
                     b.HasData(
                         new
                         {
                             SkillId = 1L,
-                            Description = "C# programming language",
+                            Description = "Primary language for backend and application logic",
                             IsDeleted = false,
-                            Name = "C#"
+                            Name = "C# Development",
+                            SkillCategoryId = 1L
                         },
                         new
                         {
                             SkillId = 2L,
-                            Description = "Cross-platform framework for building web applications",
+                            Description = "Cross‑platform framework for building web applications",
                             IsDeleted = false,
-                            Name = "ASP.NET Core"
+                            Name = "ASP.NET Core",
+                            SkillCategoryId = 1L
                         },
                         new
                         {
                             SkillId = 3L,
-                            Description = "",
+                            Description = "Model‑View‑Controller framework for structured web applications",
                             IsDeleted = false,
-                            Name = "Data Modeling"
+                            Name = "ASP.NET MVC",
+                            SkillCategoryId = 1L
                         },
                         new
                         {
                             SkillId = 4L,
-                            Description = "",
+                            Description = "Framework for building RESTful APIs",
                             IsDeleted = false,
-                            Name = "ETL Pipelines"
+                            Name = "ASP.NET Web API",
+                            SkillCategoryId = 1L
                         },
                         new
                         {
                             SkillId = 5L,
-                            Description = "",
+                            Description = "ORM for managing data access and database interactions in .NET",
                             IsDeleted = false,
-                            Name = "Power BI Dashboarding"
+                            Name = "Entity Framework",
+                            SkillCategoryId = 1L
                         },
                         new
                         {
                             SkillId = 6L,
                             Description = "",
                             IsDeleted = false,
-                            Name = "C# Development"
+                            Name = "ASP.NET WebForms",
+                            SkillCategoryId = 1L
                         },
                         new
                         {
                             SkillId = 7L,
                             Description = "",
                             IsDeleted = false,
-                            Name = "ASP.NET MVC"
+                            Name = "VB.Net / VB6",
+                            SkillCategoryId = 1L
                         },
                         new
                         {
                             SkillId = 8L,
                             Description = "",
                             IsDeleted = false,
-                            Name = "SQL Query Optimization"
+                            Name = "Windows Forms",
+                            SkillCategoryId = 1L
+                        },
+                        new
+                        {
+                            SkillId = 9L,
+                            Description = "Running .NET services inside containers for portability",
+                            IsDeleted = false,
+                            Name = "Dockerized .NET Applications",
+                            SkillCategoryId = 1L
+                        },
+                        new
+                        {
+                            SkillId = 10L,
+                            Description = "Packages, automation, and script tasks for ETL workflows",
+                            IsDeleted = false,
+                            Name = "SSIS",
+                            SkillCategoryId = 2L
+                        },
+                        new
+                        {
+                            SkillId = 11L,
+                            Description = "Extract, transform, and load processes for structured data",
+                            IsDeleted = false,
+                            Name = "ETL Pipelines",
+                            SkillCategoryId = 2L
+                        },
+                        new
+                        {
+                            SkillId = 12L,
+                            Description = "Moving and shaping data between systems",
+                            IsDeleted = false,
+                            Name = "Data Migration & Transformation",
+                            SkillCategoryId = 2L
+                        },
+                        new
+                        {
+                            SkillId = 13L,
+                            Description = "Connecting applications and services through APIs",
+                            IsDeleted = false,
+                            Name = "API Integrations",
+                            SkillCategoryId = 2L
+                        },
+                        new
+                        {
+                            SkillId = 14L,
+                            Description = "Using PostgreSQL for containerized backend services",
+                            IsDeleted = false,
+                            Name = "PostgreSQL Integrations",
+                            SkillCategoryId = 2L
+                        },
+                        new
+                        {
+                            SkillId = 15L,
+                            Description = "Datasets, expressions, and drill‑down reporting",
+                            IsDeleted = false,
+                            Name = "SSRS",
+                            SkillCategoryId = 3L
+                        },
+                        new
+                        {
+                            SkillId = 16L,
+                            Description = "Query Optimization for Reporting",
+                            IsDeleted = false,
+                            Name = "Power BI",
+                            SkillCategoryId = 3L
+                        },
+                        new
+                        {
+                            SkillId = 17L,
+                            Description = "Ensuring accuracy and consistency of data",
+                            IsDeleted = false,
+                            Name = "Data Validation",
+                            SkillCategoryId = 4L
+                        },
+                        new
+                        {
+                            SkillId = 18L,
+                            Description = "Identifying and resolving issues across systems",
+                            IsDeleted = false,
+                            Name = "Troubleshooting",
+                            SkillCategoryId = 4L
+                        },
+                        new
+                        {
+                            SkillId = 19L,
+                            Description = "Writing clear and organized technical notes",
+                            IsDeleted = false,
+                            Name = "Documentation",
+                            SkillCategoryId = 4L
+                        },
+                        new
+                        {
+                            SkillId = 20L,
+                            Description = "Improving application and database performance",
+                            IsDeleted = false,
+                            Name = "Performance Tuning",
+                            SkillCategoryId = 4L
+                        },
+                        new
+                        {
+                            SkillId = 21L,
+                            Description = "Work item tracking and source control",
+                            IsDeleted = false,
+                            Name = "Team Foundation Server",
+                            SkillCategoryId = 4L
+                        },
+                        new
+                        {
+                            SkillId = 22L,
+                            Description = "Managing source code and project history",
+                            IsDeleted = false,
+                            Name = "Version Control (Git)",
+                            SkillCategoryId = 4L
+                        },
+                        new
+                        {
+                            SkillId = 23L,
+                            Description = "Supporting CRM‑related development tasks",
+                            IsDeleted = false,
+                            Name = "OnContact CRM Development",
+                            SkillCategoryId = 4L
+                        });
+                });
+
+            modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.SkillCategory", b =>
+                {
+                    b.Property<long>("SkillCategoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("SkillCategoryId"));
+
+                    b.Property<DateTimeOffset?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("SkillCategoryId");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("SkillCategories", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            SkillCategoryId = 1L,
+                            Description = "Technologies used to build backend services, web applications, and internal tools.",
+                            IsDeleted = false,
+                            Name = "Backend & Application Development"
+                        },
+                        new
+                        {
+                            SkillCategoryId = 2L,
+                            Description = "Tools and processes for moving, transforming, and integrating data across systems.",
+                            IsDeleted = false,
+                            Name = "Data & Integrations"
+                        },
+                        new
+                        {
+                            SkillCategoryId = 3L,
+                            Description = "Tools used to present data and build operational reports.",
+                            IsDeleted = false,
+                            Name = "Reporting & Analytics"
+                        },
+                        new
+                        {
+                            SkillCategoryId = 4L,
+                            Description = "General skills that support development, maintenance, and operational stability.",
+                            IsDeleted = false,
+                            Name = "Others"
                         });
                 });
 
@@ -364,6 +565,11 @@ namespace AuthApi.Migrations
                     b.Property<DateTimeOffset?>("DeletedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -372,49 +578,255 @@ namespace AuthApi.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<long>("TechnologyCategoryId")
+                        .HasColumnType("bigint");
+
                     b.HasKey("TechnologyId");
 
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Technologies");
+                    b.HasIndex("TechnologyCategoryId");
+
+                    b.ToTable("Technologies", (string)null);
 
                     b.HasData(
                         new
                         {
                             TechnologyId = 1L,
+                            Description = "",
                             IsDeleted = false,
-                            Name = "SQL Server"
-                        },
-                        new
-                        {
-                            TechnologyId = 2L,
-                            IsDeleted = false,
-                            Name = "SSIS"
+                            Name = "SQL Server",
+                            TechnologyCategoryId = 3L
                         },
                         new
                         {
                             TechnologyId = 3L,
+                            Description = "",
                             IsDeleted = false,
-                            Name = "SSRS"
+                            Name = "Visual Studio",
+                            TechnologyCategoryId = 3L
                         },
                         new
                         {
                             TechnologyId = 4L,
+                            Description = "",
                             IsDeleted = false,
-                            Name = "Power BI"
+                            Name = "Power BI",
+                            TechnologyCategoryId = 3L
                         },
                         new
                         {
                             TechnologyId = 5L,
+                            Description = "",
                             IsDeleted = false,
-                            Name = "ASP.NET Core"
+                            Name = "GitHub",
+                            TechnologyCategoryId = 3L
                         },
                         new
                         {
                             TechnologyId = 6L,
+                            Description = "",
                             IsDeleted = false,
-                            Name = "Entity Framework Core"
+                            Name = "Team Foundation Server",
+                            TechnologyCategoryId = 3L
+                        },
+                        new
+                        {
+                            TechnologyId = 7L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "OnContact 8.0 CRM",
+                            TechnologyCategoryId = 3L
+                        },
+                        new
+                        {
+                            TechnologyId = 8L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "ASP.NET Core MVC",
+                            TechnologyCategoryId = 1L
+                        },
+                        new
+                        {
+                            TechnologyId = 9L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "Razor",
+                            TechnologyCategoryId = 1L
+                        },
+                        new
+                        {
+                            TechnologyId = 10L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "HTML",
+                            TechnologyCategoryId = 1L
+                        },
+                        new
+                        {
+                            TechnologyId = 11L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "CSS",
+                            TechnologyCategoryId = 1L
+                        },
+                        new
+                        {
+                            TechnologyId = 12L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "JavaScript",
+                            TechnologyCategoryId = 1L
+                        },
+                        new
+                        {
+                            TechnologyId = 13L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "C#",
+                            TechnologyCategoryId = 2L
+                        },
+                        new
+                        {
+                            TechnologyId = 14L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "ASP.NET Core Web API",
+                            TechnologyCategoryId = 2L
+                        },
+                        new
+                        {
+                            TechnologyId = 15L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "Typed HttpClient",
+                            TechnologyCategoryId = 2L
+                        },
+                        new
+                        {
+                            TechnologyId = 16L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "PostgreSQL",
+                            TechnologyCategoryId = 3L
+                        },
+                        new
+                        {
+                            TechnologyId = 17L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "Entity Framework Core",
+                            TechnologyCategoryId = 3L
+                        },
+                        new
+                        {
+                            TechnologyId = 18L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "ASP.NET Core Identity",
+                            TechnologyCategoryId = 4L
+                        },
+                        new
+                        {
+                            TechnologyId = 19L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "JWT",
+                            TechnologyCategoryId = 4L
+                        },
+                        new
+                        {
+                            TechnologyId = 20L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "Cloudflare Turnstile",
+                            TechnologyCategoryId = 4L
+                        },
+                        new
+                        {
+                            TechnologyId = 21L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "Docker",
+                            TechnologyCategoryId = 5L
+                        },
+                        new
+                        {
+                            TechnologyId = 22L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "Docker Compose",
+                            TechnologyCategoryId = 5L
+                        });
+                });
+
+            modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.TechnologyCategory", b =>
+                {
+                    b.Property<long>("TechnologyCategoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("TechnologyCategoryId"));
+
+                    b.Property<DateTimeOffset?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("TechnologyCategoryId");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("TechnologyCategories", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            TechnologyCategoryId = 1L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "Frontend"
+                        },
+                        new
+                        {
+                            TechnologyCategoryId = 2L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "Backend"
+                        },
+                        new
+                        {
+                            TechnologyCategoryId = 3L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "Data"
+                        },
+                        new
+                        {
+                            TechnologyCategoryId = 4L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "Security"
+                        },
+                        new
+                        {
+                            TechnologyCategoryId = 5L,
+                            Description = "",
+                            IsDeleted = false,
+                            Name = "Infrastructure"
                         });
                 });
 
@@ -466,6 +878,36 @@ namespace AuthApi.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("RefreshTokens");
+                });
+
+            modelBuilder.Entity("AuthApi.Domain.Entitities.SecurityEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("IpAddress")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SecurityEvents");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -641,6 +1083,28 @@ namespace AuthApi.Migrations
                     b.Navigation("Project");
                 });
 
+            modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.Skill", b =>
+                {
+                    b.HasOne("AuthApi.Domain.Entitities.Portfolio.SkillCategory", "SkillCategory")
+                        .WithMany("Skills")
+                        .HasForeignKey("SkillCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SkillCategory");
+                });
+
+            modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.Technology", b =>
+                {
+                    b.HasOne("AuthApi.Domain.Entitities.Portfolio.TechnologyCategory", "TechnologyCategory")
+                        .WithMany("Technologies")
+                        .HasForeignKey("TechnologyCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("TechnologyCategory");
+                });
+
             modelBuilder.Entity("AuthApi.Domain.Entitities.RefreshToken", b =>
                 {
                     b.HasOne("AuthApi.Domain.Entitities.ApplicationUser", "User")
@@ -741,6 +1205,16 @@ namespace AuthApi.Migrations
             modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.Project", b =>
                 {
                     b.Navigation("Screenshots");
+                });
+
+            modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.SkillCategory", b =>
+                {
+                    b.Navigation("Skills");
+                });
+
+            modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.TechnologyCategory", b =>
+                {
+                    b.Navigation("Technologies");
                 });
 #pragma warning restore 612, 618
         }

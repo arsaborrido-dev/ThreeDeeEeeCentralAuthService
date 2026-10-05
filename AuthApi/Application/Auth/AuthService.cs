@@ -1,5 +1,4 @@
-﻿using AuthApi.Api.Controllers;
-using AuthApi.Application.Auth.DTOs;
+﻿using AuthApi.Application.Auth.DTOs;
 using AuthApi.Application.Common.Interfaces;
 using AuthApi.Application.Common.Models;
 using AuthApi.Domain.Entitities;
@@ -16,306 +15,558 @@ using System.Security.Claims;
 
 //MVC (cookie) -> AuthApi (JWT + Refresh in HttpOnly cookie + Rotation)
 
-namespace AuthApi.Application.Auth
+namespace AuthApi.Application.Auth;
+public class AuthService : IAuthService
 {
-    public class AuthService : IAuthService
+    private readonly ILogger<AuthService> _logger;
+    private readonly UserManager<ApplicationUser> _userManager;
+    //private readonly ApplicationDbContext _dbContext;
+    private readonly IJwtService _jwtService;
+    private readonly JwtSettings _jwtSettings;
+    private readonly IRefreshTokenRepository _tokenRepository;
+
+    public AuthService(
+        UserManager<ApplicationUser> userManager,
+        //ApplicationDbContext dbContext,
+        IJwtService jwtService,
+        IOptions<JwtSettings> jwtOptions,
+        IRefreshTokenRepository tokenRepository,            
+        ILogger<AuthService> logger)
     {
-        private readonly ILogger<AuthService> _logger;
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly ApplicationDbContext _dbContext;
-        private readonly IJwtService _jwtService;
-        private readonly JwtSettings _jwtSettings;
-        private readonly IRefreshTokenService _refreshTokenService;
+        _userManager = userManager;
+        //_dbContext = dbContext;
+        _jwtService = jwtService;
+        _jwtSettings = jwtOptions.Value;
+        _tokenRepository = tokenRepository;
+        _logger = logger;
+    }
 
-        public AuthService(
-            UserManager<ApplicationUser> userManager,
-            ApplicationDbContext dbContext,
-            IJwtService jwtService,
-            IOptions<JwtSettings> jwtOptions,
-            IRefreshTokenService refreshTokenService,            
-            ILogger<AuthService> logger)
+    public async Task<ResponseResult> RegisterAsync(
+        RegisterDto dto,
+        CancellationToken cancellationToken)
+    {
+        var normalizedEmail = dto.Email.Trim();
+
+        var existingUser =
+            await _userManager.FindByEmailAsync(normalizedEmail);
+
+        if (existingUser != null)
         {
-            _userManager = userManager;
-            _dbContext = dbContext;
-            _jwtService = jwtService;
-            _jwtSettings = jwtOptions.Value;
-            _refreshTokenService = refreshTokenService;
-            _logger = logger;
+            _logger.LogWarning("[AuthService:RegisterAsync] - Account already exists.");
+
+            return ResponseResult.Failure(
+                "EMAIL_ALREADY_EXISTS",
+                "An account with this email already exists.");
         }
-        
-        //public async Task<AuthResult> RefreshAsync(
-        public async Task<ResponseResult<ResponseToken>> RefreshAsync(
-            string refreshToken, 
-            string ipAddress, 
-            CancellationToken cancellationToken)
+
+        var user = new ApplicationUser
         {
-            if (string.IsNullOrWhiteSpace(refreshToken))
-            {
-                _logger.LogWarning("[AuthService:RefreshAsync] - Invalid refresh token.");
+            UserName = normalizedEmail,
+            Email = normalizedEmail,
+            FirstName = dto.FirstName.Trim(),
+            LastName = dto.LastName.Trim(),
+            CreatedAtUtc = DateTime.UtcNow
+        };
 
-                return ResponseResult<ResponseToken>.Failure(
-                    "INVALID_REFRESH_TOKEN",
-                    "Invalid or expired refresh token.");
-            }
+        var createResult =
+            await _userManager.CreateAsync(user, dto.Password);
 
-            var token = await _refreshTokenService.GetActiveAsync(
-                    refreshToken,
-                    cancellationToken);          
+        if (!createResult.Succeeded)
+        {
+            _logger.LogWarning("[AuthService:RegisterAsync] - Account creation failed.");
 
-            if (token == null)
-            {
-                _logger.LogWarning("[AuthService:RefreshAsync] - Refresh token is null.");
+            var errors = createResult.Errors
+                .Select(e => e.Description)
+                .ToArray();
 
-                return ResponseResult<ResponseToken>.Failure(
-                    "INVALID_REFRESH_TOKEN",
-                    "Invalid or expired refresh token.");
-            }
-
-            if (!token.IsActive)
-            {
-                _logger.LogWarning("[AuthService:RefreshAsync] - Refresh token is inactive.");
-
-                return ResponseResult<ResponseToken>.Failure(
-                    "INVALID_REFRESH_TOKEN",
-                    "Invalid or expired refresh token.");
-            }
-                       
-            var user = await _userManager.FindByIdAsync(token.UserId);
-
-            if (user == null)
-            {
-                _logger.LogWarning("[AuthService:RefreshAsync] - Token user is null.");
-
-                return ResponseResult<ResponseToken>.Failure(
-                    "INVALID_REFRESH_TOKEN",
-                    "Invalid or expired refresh token.");
-            }
-
-            if (!await _userManager.IsEmailConfirmedAsync(user))
-            {
-                _logger.LogWarning("[AuthService:RefreshAsync] - User email is not confirmed.");
-
-                return ResponseResult<ResponseToken>.Failure(
-                    "INVALID_REFRESH_TOKEN",
-                    "Invalid or expired refresh token.");
-            }
-
-            var response = await CreateTokenResponseAsync(
-                user,
-                cancellationToken,
-                ipAddress, 
-                true, 
-                token);
-
-            //if (response == null)
-            //{
-            //    _logger.LogWarning("[AuthService:RefreshAsync] - Created token is null.");
-
-            //    return ResponseResult<ResponseToken>.Failure(
-            //        "INVALID_REFRESH_TOKEN",
-            //        "Invalid or expired refresh token.");
-            //}
-
-            return ResponseResult<ResponseToken>.Success(response);
+            return ResponseResult.Failure(
+                "REGISTRATION_FAILED",
+                string.Join(", ", errors));
         }
-        public async Task<ResponseResult<ResponseToken>> LoginAsync(
-            LoginDto dto,
-            string ipAddress,
-            CancellationToken cancellationToken)
+
+        var roleResult =
+            await _userManager.AddToRoleAsync(user, "User");
+
+        if (!roleResult.Succeeded)
         {
-            var user = await _userManager.FindByEmailAsync(dto.Email);
+            _logger.LogWarning("[AuthService:RegisterAsync] - Unable to complete registration.");
 
-            if (user == null)
-            {
-                _logger.LogWarning("[AuthService:LoginAsync] - Authentication failed.");
+            // Compensating action: remove the newly-created user.
+            await _userManager.DeleteAsync(user);
 
-                return ResponseResult<ResponseToken>.Failure(
-                    "INVALID_CREDENTIALS",
-                    "Invalid email or password.");
-            }
-
-            var passwordValid =
-                await _userManager.CheckPasswordAsync(user, dto.Password);
-
-            if (!passwordValid)
-            {
-                _logger.LogWarning("[AuthService:LoginAsync] - Authentication failed: invalid credentials.");
-
-                return ResponseResult<ResponseToken>.Failure(
-                    "INVALID_CREDENTIALS",
-                    "Invalid email or password.");
-            }
-
-            var response = await CreateTokenResponseAsync(
-                user,
-                cancellationToken,
-                ipAddress, 
-                false, 
-                null);
-
-            //if (response == null)
-            //{
-            //    _logger.LogWarning("[AuthService:LoginAsync] - Created token is null.");
-
-            //    return ResponseResult<ResponseToken>.Failure(
-            //        "INVALID_CREDENTIALS",
-            //        "Invalid email or password.");
-            //}
-
-            return ResponseResult<ResponseToken>.Success(response);
+            return ResponseResult.Failure(
+                "REGISTRATION_FAILED",
+                "Unable to complete registration.");
         }
-        public async Task<ResponseResult> RegisterAsync(
-            RegisterDto dto, 
-            CancellationToken cancellationToken)
+
+        return ResponseResult.Success();
+    }
+    public async Task<ResponseResult<ResponseToken>> LoginAsync(
+        LoginDto dto,
+        string ipAddress,
+        CancellationToken cancellationToken)
+    {
+        var user = await _userManager.FindByEmailAsync(dto.Email);
+
+        if (user == null)
         {
-            var normalizedEmail = dto.Email.Trim();
+            _logger.LogWarning("[AuthService:LoginAsync] - Authentication failed.");
 
-            var existingUser =
-                await _userManager.FindByEmailAsync(normalizedEmail);
+            return ResponseResult<ResponseToken>.Failure(
+                "INVALID_CREDENTIALS",
+                "Invalid email or password.");
+        }
 
-            if (existingUser != null)
-            {
-                _logger.LogWarning("[AuthService:RegisterAsync] - Account already exists.");
+        var passwordValid =
+            await _userManager.CheckPasswordAsync(user, dto.Password);
 
-                return ResponseResult.Failure(
-                    "EMAIL_ALREADY_EXISTS",
-                    "An account with this email already exists.");
-            }
+        if (!passwordValid)
+        {
+            _logger.LogWarning("[AuthService:LoginAsync] - Authentication failed: invalid credentials.");
 
-            var user = new ApplicationUser
-            {
-                UserName = normalizedEmail,
-                Email = normalizedEmail,
-                FirstName = dto.FirstName.Trim(),
-                LastName = dto.LastName.Trim(),
-                CreatedAtUtc = DateTime.UtcNow
-            };
+            return ResponseResult<ResponseToken>.Failure(
+                "INVALID_CREDENTIALS",
+                "Invalid email or password.");
+        }
 
-            var createResult =
-                await _userManager.CreateAsync(user, dto.Password);
+        var response = await CreateTokenResponseAsync(
+            user,
+            cancellationToken,
+            ipAddress,
+            false,
+            null);
 
-            if (!createResult.Succeeded)
-            {
-                _logger.LogWarning("[AuthService:RegisterAsync] - Account creation failed.");
+        return ResponseResult<ResponseToken>.Success(response);
+    }
 
-                var errors = createResult.Errors
-                    .Select(e => e.Description)
-                    .ToArray();
-
-                return ResponseResult.Failure(
-                    "REGISTRATION_FAILED",
-                    string.Join(", ", errors));
-            }
-
-            var roleResult =
-                await _userManager.AddToRoleAsync(user, "User");
-
-            if (!roleResult.Succeeded)
-            {
-                _logger.LogWarning("[AuthService:RegisterAsync] - Unable to complete registration.");
-
-                // Compensating action: remove the newly-created user.
-                await _userManager.DeleteAsync(user);
-
-                return ResponseResult.Failure(
-                    "REGISTRATION_FAILED",
-                    "Unable to complete registration.");
-            }
-
+    public async Task<ResponseResult> LogoutAsync(
+        string refreshToken,
+        string ipAddress,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
             return ResponseResult.Success();
         }
 
-        public async Task RevokeAsync(
-            string refreshToken,
-            string ipAddress,
-            CancellationToken cancellationToken)
+        var token = await _tokenRepository.GetTokenAsync(
+            refreshToken,
+            cancellationToken);
+
+        if (token == null)
         {
-            if (string.IsNullOrWhiteSpace(refreshToken))
-            {
-                _logger.LogWarning("[AuthService:RevokeAsync] - Invalid refresh token.");
-
-                return;
-            }                
-
-            var token = await _dbContext.RefreshTokens
-                .SingleOrDefaultAsync(t => t.TokenHash == refreshToken);
-
-            if (token == null || !token.IsActive)
-            {
-                _logger.LogWarning("[AuthService:RevokeAsync] - Invalid or inactive refresh token.");
-
-                return;
-            }
-
-            token.RevokedAtUtc = DateTime.UtcNow;
-            token.RevokedByIp = ipAddress;
-
-            await _dbContext.SaveChangesAsync();
+            // Logout should be idempotent.
+            // The client is already logged out from our perspective.
+            return ResponseResult.Success();
         }
-        private async Task<ResponseToken> CreateTokenResponseAsync(
-            ApplicationUser user,
-            CancellationToken cancellationToken,
-            string? ipAddress,
-            bool isRefresh = false,
-            RefreshToken? token = null)
+
+        if (token.RevokedAtUtc != null)
         {
-            var roles = await _userManager.GetRolesAsync(user);
-
-            var claims = new List<Claim>
-            {
-                new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new(ClaimTypes.Email, user.Email!),
-                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new(JwtRegisteredClaimNames.Sub, user.Id.ToString())
-            };
-
-            claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
-
-            var accessToken = _jwtService.GenerateAccessToken(claims);
-
-            var accessTokenExpiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpireMinutes);
-
-            // Create the new refresh token first.
-            var (rawRefreshToken, refreshToken) =
-                await _refreshTokenService.CreateAsync(
-                    user.Id,
-                    ipAddress,
-                    cancellationToken);
-
-            user.RefreshTokens.Add(refreshToken);
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            if (isRefresh && token != null)
-            {
-                //revoke old token
-                await _refreshTokenService.RevokeAsync(
-                    token,
-                    ipAddress,
-                    refreshToken.TokenHash,
-                    cancellationToken);
-            }
-
-            return new ResponseToken(
-                  accessToken,
-                  accessTokenExpiresAt,
-                  rawRefreshToken,
-                  refreshToken.ExpiresAtUtc);
+            // Already revoked.
+            return ResponseResult.Success();
         }
+
+        await _tokenRepository.RevokeAsync(
+            token,
+            ipAddress,
+            replacementTokenHash: null,
+            cancellationToken);
+
+        return ResponseResult.Success();
     }
+
+    public async Task<ResponseResult> CleanupTokensAsync(CancellationToken cancellationToken = default)
+    {
+        await _tokenRepository.CleanupAsync(cancellationToken);
+
+        return ResponseResult.Success();
+    }
+
+    public async Task<ResponseResult<ResponseToken>> RefreshTokenAsync(
+        string refreshToken,
+        string ipAddress,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            _logger.LogWarning(
+                "[AuthService:RefreshTokenAsync] - Refresh token is blank/null.");
+
+            return ResponseResult<ResponseToken>.Failure(
+                "INVALID_REFRESH_TOKEN",
+                "Invalid or expired refresh token.");
+        }
+
+        var token = await _tokenRepository.GetTokenAsync(
+                refreshToken,
+                cancellationToken);
+
+        if (token == null)
+        {
+            _logger.LogWarning(
+                "[AuthService:RefreshTokenAsync] - Refresh token was not found.");
+
+            return ResponseResult<ResponseToken>.Failure(
+                "INVALID_REFRESH_TOKEN",
+                "Invalid or expired refresh token.");
+        }
+
+        //check if either revoked or expired
+        if (!token.IsActive)
+        {
+            if (token.RevokedAtUtc != null)
+            {
+                _logger.LogWarning(
+                "[AuthService:RefreshTokenAsync] - Refresh token was revoked.");
+
+                await _tokenRepository.LogSecurityEvent(
+                    token.CreatedByIp,
+                    "REVOKED_TOKEN_USED",
+                    ipAddress,
+                    "Revoked refresh token reuse"
+                    );
+
+                // TODO:
+                // Evaluate whether the token family/session should be revoked.
+            }
+            else
+            {
+                //expired refresh token
+                _logger.LogWarning(
+                "[AuthService:RefreshTokenAsync] - Refresh token has expired.");
+            }
+
+            return ResponseResult<ResponseToken>.Failure(
+                "INVALID_REFRESH_TOKEN",
+                "Invalid or expired refresh token.");
+        }
+
+        //check ip mismatch (possible stolen token)
+        // Validate IP address.
+        if (!string.Equals(
+                token.CreatedByIp,
+                ipAddress,
+                StringComparison.Ordinal))
+        {
+            _logger.LogWarning(
+                "[AuthService:RefreshTokenAsync] - Refresh token IP address mismatch.");
+
+            await _tokenRepository.LogSecurityEvent(
+                    token.CreatedByIp,
+                    "IP_ADDRESS_MISMATCHED",
+                    ipAddress,
+                    "Refresh token IP address mismatch"
+                    );
+
+            return ResponseResult<ResponseToken>.Failure(
+                "INVALID_REFRESH_TOKEN",
+                "Invalid or expired refresh token.");
+        }
+
+        // Validate associated user.
+        var user = await _userManager.FindByIdAsync(token.UserId);
+
+        if (user == null)
+        {
+            _logger.LogWarning(
+                "[AuthService:RefreshTokenAsync] - Refresh token references a non-existent user.");
+
+            await _tokenRepository.LogSecurityEvent(
+                    token.CreatedByIp,
+                    "INVALID_TOKEN_USER",
+                    ipAddress,
+                    "Refresh token references a non-existent user"
+                    );
+
+            return ResponseResult<ResponseToken>.Failure(
+                "INVALID_REFRESH_TOKEN",
+                "Invalid or expired refresh token.");
+        }
+
+        // Validate account state.
+        if (!await _userManager.IsEmailConfirmedAsync(user))
+        {
+            _logger.LogWarning(
+                "[AuthService:RefreshTokenAsync] - User email is not confirmed.");
+
+            //what happens to refresh token if user state changes???
+
+            return ResponseResult<ResponseToken>.Failure(
+                "INVALID_REFRESH_TOKEN",
+                "Invalid or expired refresh token.");
+        }
+
+        var response = await CreateTokenResponseAsync(
+            user,
+            cancellationToken,
+            ipAddress,
+            isRefresh: true,
+            token);
+
+        return ResponseResult<ResponseToken>.Success(response);
+    }
+
+    public async Task<ResponseResult> RevokeTokenAsync(
+        string refreshToken,
+        string? ipAddress,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            _logger.LogWarning("[RefreshTokenService:RevokeTokenAsync] - Refresh token is blank/null.");
+
+            return ResponseResult<ResponseToken>.Failure(
+                "INVALID_REFRESH_TOKEN",
+                "Invalid or expired refresh token.");
+        }
+
+        var token = await _tokenRepository.GetTokenAsync(
+                refreshToken,
+                cancellationToken);
+
+        if (token == null)
+        {
+            _logger.LogWarning("[RefreshTokenService:RevokeTokenAsync] - Refresh token was not found.");
+
+            return ResponseResult<ResponseToken>.Failure(
+                "INVALID_REFRESH_TOKEN",
+                "Invalid or expired refresh token.");
+        }
+
+        await _tokenRepository.RevokeAsync(
+            token,
+            ipAddress,
+            null,
+            cancellationToken);
+
+        return ResponseResult.Success();
+
+    }
+    private async Task<ResponseToken> CreateTokenResponseAsync(
+        ApplicationUser user,
+        CancellationToken cancellationToken,
+        string? ipAddress,
+        bool isRefresh = false,
+        RefreshToken? token = null)
+    {
+        var roles = await _userManager.GetRolesAsync(user);
+
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Email, user.Email!),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString())
+        };
+
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+        var accessToken = _jwtService.GenerateAccessToken(claims);
+        var accessTokenExpiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpireMinutes);
+
+        // Create the new refresh token first.
+        var (rawRefreshToken, refreshToken) =
+            await _tokenRepository.CreateAsync(
+                user,
+                ipAddress,
+                isRefresh,
+                token,
+                cancellationToken);
+
+        ////revoke previously created token
+        //if (isRefresh && token != null)
+        //{
+        //    //revoke old token
+        //    await _tokenRepository.RevokeAsync(
+        //        token,
+        //        ipAddress,
+        //        refreshToken.TokenHash,
+        //        cancellationToken);
+        //}
+
+        return new ResponseToken(
+              accessToken,
+              accessTokenExpiresAt,
+              rawRefreshToken,
+              refreshToken.ExpiresAtUtc);
+    }
+
+    //public async Task<ResponseResult<ResponseToken>> RefreshAsync(
+    //    string refreshToken, 
+    //    string ipAddress, 
+    //    CancellationToken cancellationToken)
+    //{
+    //    if (string.IsNullOrWhiteSpace(refreshToken))
+    //    {
+    //        _logger.LogWarning("[AuthService:RefreshAsync] - Invalid refresh token.");
+
+    //        return ResponseResult<ResponseToken>.Failure(
+    //            "INVALID_REFRESH_TOKEN",
+    //            "Invalid or expired refresh token.");
+    //    }
+
+    //    var token = await _refreshTokenService.GetActiveAsync(
+    //            refreshToken,
+    //            cancellationToken);
+
+    //    if (token == null)
+    //    {
+    //        _logger.LogWarning("[AuthService:RefreshAsync] - Refresh token is null - non-existing.");
+
+    //        return ResponseResult<ResponseToken>.Failure(
+    //            "INVALID_REFRESH_TOKEN",
+    //            "Invalid or expired refresh token.");
+    //    }
+
+    //    //check if either revoked or expired
+    //    if (!token.IsActive)
+    //    {
+    //        if (token.RevokedAtUtc != null)
+    //        {
+    //            _logger.LogWarning("[AuthService:RefreshAsync] - Refresh token is inactive - revoked.");
+    //            //ADD TO SecurityEvents
+    //            //need to revoke all user tokens???
+    //        }
+    //        else
+    //        {
+    //            _logger.LogWarning("[AuthService:RefreshAsync] - Refresh token is inactive - expired.");
+    //        }
+
+    //        return ResponseResult<ResponseToken>.Failure(
+    //            "INVALID_REFRESH_TOKEN",
+    //            "Invalid or expired refresh token.");
+    //    }
+
+    //    //check ip mismatch (possible stolen token)
+    //    if (token.CreatedByIp != ipAddress)
+    //    {
+    //        _logger.LogWarning("[AuthService:RefreshAsync] - Refresh token ip address mismatch.");
+
+    //        return ResponseResult<ResponseToken>.Failure(
+    //            "INVALID_REFRESH_TOKEN",
+    //            "Invalid or expired refresh token.");
+
+    //        //ADD TO SecurityEvents
+
+    //        //need to revoke all user tokens???
+    //    }
+
+    //    var user = await _userManager.FindByIdAsync(token.UserId);
+
+    //    if (user == null)
+    //    {
+    //        _logger.LogWarning("[AuthService:RefreshAsync] - Token user is null.");
+
+    //        return ResponseResult<ResponseToken>.Failure(
+    //            "INVALID_REFRESH_TOKEN",
+    //            "Invalid or expired refresh token.");
+    //    }
+
+    //    if (!await _userManager.IsEmailConfirmedAsync(user))
+    //    {
+    //        _logger.LogWarning("[AuthService:RefreshAsync] - User email is not confirmed.");
+
+    //        return ResponseResult<ResponseToken>.Failure(
+    //            "INVALID_REFRESH_TOKEN",
+    //            "Invalid or expired refresh token.");
+    //    }
+
+    //    var response = await CreateTokenResponseAsync(
+    //        user,
+    //        cancellationToken,
+    //        ipAddress, 
+    //        true, 
+    //        token);
+
+    //    return ResponseResult<ResponseToken>.Success(response);
+    //}
+
+    //public async Task RevokeAsync(
+    //    string refreshToken,
+    //    string ipAddress,
+    //    CancellationToken cancellationToken)
+    //{
+    //if (string.IsNullOrWhiteSpace(refreshToken))
+    //{
+    //    _logger.LogWarning("[AuthService:RevokeAsync] - Invalid refresh token.");
+
+    //    return;
+    //}                
+
+    //var token = await _dbContext.RefreshTokens
+    //    .SingleOrDefaultAsync(t => t.TokenHash == refreshToken);
+
+    //if (token == null || !token.IsActive)
+    //{
+    //    _logger.LogWarning("[AuthService:RevokeAsync] - Invalid or inactive refresh token.");
+
+    //    return;
+    //}
+
+    //token.RevokedAtUtc = DateTime.UtcNow;
+    //token.RevokedByIp = ipAddress;
+
+    //await _dbContext.SaveChangesAsync();
+    //}
+    //public async Task CleanupRefreshTokensAsync()
+    //{
+    //    await _refreshTokenService.CleanupAsync();
+    //}
+    //private async Task<ResponseToken> CreateTokenResponseAsync(
+    //    ApplicationUser user,
+    //    CancellationToken cancellationToken,
+    //    string? ipAddress,
+    //    bool isRefresh = false,
+    //    RefreshToken? token = null)
+    //{
+    //    var roles = await _userManager.GetRolesAsync(user);
+
+    //    var claims = new List<Claim>
+    //    {
+    //        new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+    //        new(ClaimTypes.Email, user.Email!),
+    //        new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+    //        new(JwtRegisteredClaimNames.Sub, user.Id.ToString())
+    //    };
+
+    //    claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+    //    var accessToken = _jwtService.GenerateAccessToken(claims);
+
+    //    var accessTokenExpiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpireMinutes);
+
+    //    // Create the new refresh token first.
+    //    var (rawRefreshToken, refreshToken) =
+    //        await _refreshTokenService.CreateAsync(
+    //            user,
+    //            ipAddress,
+    //            cancellationToken);
+
+    //    ////add token to user
+    //    //user.RefreshTokens.Add(refreshToken);
+
+    //    await _dbContext.SaveChangesAsync(cancellationToken);   
+
+    //    //revoke previously created token
+    //    if (isRefresh && token != null)
+    //    {
+    //        //revoke old token
+    //        await _refreshTokenService.RevokeAsync(
+    //            token,
+    //            ipAddress,
+    //            refreshToken.TokenHash,
+    //            cancellationToken);
+    //    }
+
+    //    return new ResponseToken(
+    //          accessToken,
+    //          accessTokenExpiresAt,
+    //          rawRefreshToken,
+    //          refreshToken.ExpiresAtUtc);
+    //}
 }
 
-//////public async Task CleanupRefreshTokensAsync()
-//////{
-//////    var cutoff = DateTime.UtcNow.AddDays(-30);
 
-//////    var tokens = _dbContext.RefreshTokens
-//////        .Where(t => t.IsRevoked && t.RevokedAt < cutoff || t.ExpiresAt < DateTime.UtcNow);
-
-//////    _dbContext.RefreshTokens.RemoveRange(tokens);
-
-//////    await _dbContext.SaveChangesAsync();
-//////}
 
 
 ////What your refresh endpoint should do when a revoked token is used
@@ -343,15 +594,6 @@ namespace AuthApi.Application.Auth
 ////return Unauthorized("Refresh token has been revoked.");
 ///
 
-////public class SecurityEvent
-////{
-////    public Guid Id { get; set; }
-////    public Guid UserId { get; set; }
-////    public string EventType { get; set; } // e.g., "RevokedTokenUsed"
-////    public string IpAddress { get; set; }
-////    public DateTime Timestamp { get; set; }
-////    public string Details { get; set; }
-////}
 
 ////_dbContext.SecurityEvents.Add(new SecurityEvent
 ////{

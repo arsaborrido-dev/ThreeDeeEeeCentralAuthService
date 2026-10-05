@@ -1,12 +1,10 @@
 ﻿using AuthApi.Application.Common.Models;
 using AuthApi.Application.Portfolio.Contacts.DTOs;
 
-namespace AuthApi.Application.Portfolio.Contacts
+namespace AuthApi.Application.Portfolio.Contacts;
+public interface IContactService
 {
-    public interface IContactService
-    {
-        Task<ResponseResult> SaveContactMessageAsync(
-            ContactMessageRequest request,
-            CancellationToken cancellationToken = default);
-    }
+    Task<ResponseResult> SaveContactMessageAsync(
+        ContactMessageRequest request,
+        CancellationToken cancellationToken = default);
 }

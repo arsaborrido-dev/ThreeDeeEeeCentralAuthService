@@ -72,10 +72,10 @@ namespace AuthApi.Api.Controllers
         }
 
         // GET /api/projects/5
-        [HttpGet("{id:int:min(1)}")]
+        [HttpGet("{id:long:min(1)}")]
         [EnableRateLimiting("api-moderate")]
         public async Task<ActionResult<ProjectResponse>> GetProjectById(
-            int id,
+            long id,
             CancellationToken cancellationToken)
         {
 

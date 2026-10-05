@@ -1,21 +1,18 @@
-﻿namespace AuthApi.Api.Middleware
+﻿namespace AuthApi.Api.Middleware;
+public class SecurityHeadersMiddleware
 {
-    public class SecurityHeadersMiddleware
+    private readonly RequestDelegate _next;
+    public SecurityHeadersMiddleware(RequestDelegate next)
     {
-        private readonly RequestDelegate _next;
+        _next = next;
+    }
 
-        public SecurityHeadersMiddleware(RequestDelegate next)
-        {
-            _next = next;
-        }
+    public async Task InvokeAsync(HttpContext context)
+    {
+        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        context.Response.Headers["X-Frame-Options"] = "DENY";
+        context.Response.Headers["Referrer-Policy"] = "no-referrer";
 
-        public async Task InvokeAsync(HttpContext context)
-        {
-            context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-            context.Response.Headers["X-Frame-Options"] = "DENY";
-            context.Response.Headers["Referrer-Policy"] = "no-referrer";
-
-            await _next(context);
-        }
+        await _next(context);
     }
 }

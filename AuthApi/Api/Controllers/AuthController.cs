@@ -5,6 +5,10 @@ using AuthApi.Application.Auth.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
+
+using AuthApi.Application.Common.Models;
+
 //using Microsoft.IdentityModel.Tokens;
 
 using System.Security.Claims;
@@ -19,19 +23,24 @@ public class AuthController : ControllerBase
     private readonly IWebHostEnvironment _environment;
     private readonly IAuthService _authService;
     private readonly ILogger<AuthController> _logger;
+    private readonly RefreshTokenSettings _tokenSettings;
     public AuthController(IAuthService authService, 
-        IWebHostEnvironment environment, 
-        ILogger<AuthController> logger)
+        IWebHostEnvironment environment,
+        ILogger<AuthController> logger,
+        IOptions<RefreshTokenSettings> tokenOptions)
     {
         _authService = authService;
         _environment = environment;
         _logger = logger;
+        _tokenSettings = tokenOptions.Value;
     }
 
     [HttpPost("register")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-strict")]    
-    public async Task<IActionResult> Register(RegisterDto dto, CancellationToken cancellationToken)
+    public async Task<IActionResult> Register(
+        RegisterDto dto, 
+        CancellationToken cancellationToken)
     {
         var result = await _authService.RegisterAsync(dto, cancellationToken);
 
@@ -51,13 +60,16 @@ public class AuthController : ControllerBase
 
         return StatusCode(
             StatusCodes.Status201Created,
-            new { message = "Registration successful" });
+            new { message = "Registration successful" }
+            );
     }
 
     [HttpPost("login")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-strict")]    
-    public async Task<IActionResult> Login(LoginDto dto, CancellationToken cancellationToken)
+    public async Task<IActionResult> Login(
+        LoginDto dto, 
+        CancellationToken cancellationToken)
     {
         var result = await _authService.LoginAsync(
             dto,
@@ -81,6 +93,7 @@ public class AuthController : ControllerBase
 
         var response = result.Data!;
 
+        //create cookie
         SetRefreshTokenCookie(response.RefreshToken);
 
         return Ok(new
@@ -90,15 +103,33 @@ public class AuthController : ControllerBase
         });
     }
 
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<IActionResult> Logout(
+    [FromBody] LogoutRequest request,
+    CancellationToken cancellationToken)
+    {
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        var result = await _authService.LogoutAsync(
+            request.RefreshToken,
+            ipAddress ?? string.Empty,
+            cancellationToken);
+
+        return Ok(result);
+    }
+
+
     [HttpPost("refresh")]
     [AllowAnonymous]
-    [EnableRateLimiting("auth-strict")]    
-    public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
+    [EnableRateLimiting("auth-strict")]
+    public async Task<IActionResult> Refresh(
+        CancellationToken cancellationToken)
     {
         var refreshToken = Request.Cookies["refreshToken"];
 
         if (string.IsNullOrWhiteSpace(refreshToken))
-        {   
+        {
             _logger.LogWarning("[AuthController:Refresh] - Invalid refresh request.");
 
             return Problem(
@@ -107,11 +138,11 @@ public class AuthController : ControllerBase
                 detail: _environment.IsDevelopment()
                     ? "refreshToken does not exists."
                     : null);
-        }       
+        }
 
-        var result = await _authService.RefreshAsync(
-            refreshToken, 
-            GetIpAddress(), 
+        var result = await _authService.RefreshTokenAsync(
+            refreshToken,
+            GetIpAddress(),
             cancellationToken);
 
         if (!result.Succeeded)
@@ -130,14 +161,15 @@ public class AuthController : ControllerBase
 
         var response = result.Data;
 
-        return Ok(response); 
+        return Ok(response);
     }
-    
+
     //user logout
     [HttpPost("revoke")]
     [AllowAnonymous]
-    [EnableRateLimiting("auth-strict")]    
-    public async Task<IActionResult> Revoke(CancellationToken cancellationToken)
+    [EnableRateLimiting("auth-strict")]
+    public async Task<IActionResult> Revoke(
+        CancellationToken cancellationToken)
     {
         var refreshToken = Request.Cookies["refreshToken"];
 
@@ -147,10 +179,10 @@ public class AuthController : ControllerBase
 
             DeleteRefreshTokenCookie();
 
-            return StatusCode(StatusCodes.Status204NoContent);            
+            return StatusCode(StatusCodes.Status204NoContent);
         }
 
-        await _authService.RevokeAsync(
+        await _authService.RevokeTokenAsync(
                 refreshToken,
                 GetIpAddress(),
                 cancellationToken);
@@ -179,7 +211,8 @@ public class AuthController : ControllerBase
             email,
             roles));
     }
-    private void SetRefreshTokenCookie(string token)
+    private void SetRefreshTokenCookie(
+        string token)
     {
         Response.Cookies.Append(
             "refreshToken",
@@ -189,21 +222,19 @@ public class AuthController : ControllerBase
                 HttpOnly = false, //true,
                 Secure = false, //true,
                 SameSite = SameSiteMode.Strict,
-                MaxAge = TimeSpan.FromDays(7),
-                Path = "/api/auth"
+                MaxAge = TimeSpan.FromDays(_tokenSettings.RefreshTokenExpireDays),
+                Path = _tokenSettings.CookiePath //"/api/auth"
             });
     }
     private void DeleteRefreshTokenCookie()
-    {
+    {     
         Response.Cookies.Delete(
-            "refreshToken",
+            "refreshToken", 
             new CookieOptions
             {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Path = "/api/auth"
+                Path = _tokenSettings.CookiePath //"/api/auth"
             });
+
     }
     private string GetIpAddress()
     {

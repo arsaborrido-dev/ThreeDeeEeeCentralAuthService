@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AuthApi.Infrastracture.Persistence.Configurations;
-
 public sealed class ProjectConfiguration
     : IEntityTypeConfiguration<Project>
 {
@@ -21,6 +20,9 @@ public sealed class ProjectConfiguration
             .HasMaxLength(500);
 
         builder.Property(x => x.LongDescription)
+            .IsRequired();
+
+        builder.Property(x => x.ProjectDemonstration)
             .IsRequired();
 
         builder.Property(x => x.ThumbnailImageUrl)

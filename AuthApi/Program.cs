@@ -5,10 +5,11 @@ using AuthApi.Application.Common.Models;
 using AuthApi.Application.Portfolio.Contacts;
 using AuthApi.Application.Portfolio.Projects;
 using AuthApi.Application.Portfolio.Skills;
+using AuthApi.Application.Portfolio.Technologies;
 using AuthApi.Domain.Entitities;
 using AuthApi.Infrastracture.Captcha;
 using AuthApi.Infrastracture.Persistence;
-using AuthApi.Infrastracture.Persistence.Repositories;
+using AuthApi.Infrastracture.Persistence.Repositories.Portfolio;
 using AuthApi.Infrastracture.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -158,10 +159,10 @@ builder.Services
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 var jwtSettings = builder.Configuration
-        .GetSection("Jwt")
-        .Get<JwtSettings>()
+    .GetSection("Jwt")
+    .Get<JwtSettings>()
     ?? throw new InvalidOperationException(
-        "Jwt signing key is not configured.");
+        "JWT is not configured.");
 
 var keyBytes = Encoding.UTF8.GetBytes(jwtSettings.Key);
 
@@ -235,15 +236,24 @@ builder.Services.AddCors(options =>
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<CaptchaSettings>(builder.Configuration.GetSection("Captcha"));
+builder.Services.Configure<RefreshTokenSettings>(builder.Configuration.GetSection("RefreshToken"));
+
 
 builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+
 builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
+
 builder.Services.AddScoped<ISkillRepository, SkillRepository>();
 builder.Services.AddScoped<ISkillService, SkillService>();
+
+builder.Services.AddScoped<ITechnologyRepository, TechnologyRepository> ();
+builder.Services.AddScoped<ITechnologyService, TechnologyService>();
+
 builder.Services.AddScoped<IContactService, ContactService>();
 builder.Services.AddScoped<IContactRepository, ContactRepository>();
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 

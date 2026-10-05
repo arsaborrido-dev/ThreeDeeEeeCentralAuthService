@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AuthApi.Infrastracture.Persistence.Configurations;
-
 public sealed class RefreshTokenConfiguration
     : IEntityTypeConfiguration<RefreshToken>
 {

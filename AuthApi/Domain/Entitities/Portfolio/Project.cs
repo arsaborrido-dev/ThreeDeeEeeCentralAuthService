@@ -6,6 +6,7 @@ public class Project : SoftDeletableEntity
     public string Title { get; set; } = string.Empty;
     public string ShortDescription { get; set; } = string.Empty;
     public string LongDescription { get; set; } = string.Empty;
+    public string ProjectDemonstration { get; set; } = string.Empty;
     public string? ThumbnailImageUrl { get; set; }
     public string? GitHubUrl { get; set; }
     public string? LiveDemoUrl { get; set; }

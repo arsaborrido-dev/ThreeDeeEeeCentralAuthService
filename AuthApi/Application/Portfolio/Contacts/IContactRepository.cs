@@ -1,12 +1,10 @@
 ﻿using AuthApi.Domain.Entitities.Portfolio;
 
-namespace AuthApi.Application.Portfolio.Contacts
+namespace AuthApi.Application.Portfolio.Contacts;
+public interface IContactRepository
 {
-    public interface IContactRepository
-    {
-        //Task<int> SaveContactMessageAsync(
-        Task SaveContactMessageAsync(
-            ContactMessage message,
-            CancellationToken cancellationToken = default);
-    }
+    //Task<int> SaveContactMessageAsync(
+    Task SaveContactMessageAsync(
+        ContactMessage message,
+        CancellationToken cancellationToken = default);
 }

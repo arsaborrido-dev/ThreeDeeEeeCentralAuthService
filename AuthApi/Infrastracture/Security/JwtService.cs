@@ -11,7 +11,6 @@ public sealed class JwtService : IJwtService
 {
     private readonly JwtSettings _settings;
     private readonly SymmetricSecurityKey _signingKey;
-
     public JwtService(IOptions<JwtSettings> options)
     {
         _settings = options.Value;
@@ -30,7 +29,6 @@ public sealed class JwtService : IJwtService
 
         _signingKey = new SymmetricSecurityKey(keyBytes);
     }
-
     public string GenerateAccessToken(IEnumerable<Claim> claims)
     {
         var now = DateTime.UtcNow;
@@ -69,7 +67,6 @@ public sealed class JwtService : IJwtService
         return new JwtSecurityTokenHandler()
             .WriteToken(token);
     }
-
     public ClaimsPrincipal? ValidateAccessToken(string token)
     {
         if (string.IsNullOrWhiteSpace(token))

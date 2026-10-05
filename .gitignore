@@ -18,6 +18,9 @@ iisexpress/
 *.log
 logs/
 
+# Data Protection Keys
+data-protection-keys/
+
 # NuGet packages
 *.nupkg
 packages/
