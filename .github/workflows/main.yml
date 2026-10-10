@@ -5,9 +5,6 @@ on:
   pull_request:
     branches:
       - master
-    paths:
-      - "AuthApi/**"
-      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
