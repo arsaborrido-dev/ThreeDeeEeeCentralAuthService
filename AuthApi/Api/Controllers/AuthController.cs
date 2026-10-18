@@ -35,6 +35,17 @@ public class AuthController : ControllerBase
         _tokenSettings = tokenOptions.Value;
     }
 
+    /// <summary>
+    /// Registers a new user account.
+    /// </summary>
+    /// <remarks>
+    /// This endpoint creates a new user using AuthService.RegisterAsync.
+    /// Returns 201 on success, or 409 if registration fails.
+    /// </remarks>
+    /// <param name="dto">User registration data</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <response code="201">Registration successful</response>
+    /// <response code="409">Registration failed</response>
     [HttpPost("register")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-strict")]    
@@ -64,6 +75,18 @@ public class AuthController : ControllerBase
             );
     }
 
+
+    /// <summary>
+    /// Logs user.
+    /// </summary>
+    /// <remarks>
+    /// This endpoint logs a user using AuthService.LoginAsync.
+    /// Returns 200 on success, or 401 if login fails.
+    /// </remarks>
+    /// <param name="dto">User login data</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <response code="200">Login successful</response>
+    /// <response code="401">Login failed</response>
     [HttpPost("login")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-strict")]    
@@ -103,11 +126,21 @@ public class AuthController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Logs user out.
+    /// </summary>
+    /// <remarks>
+    /// This endpoint logs out a user using AuthService.LogoutAsync.
+    /// Returns 200 on success.
+    /// </remarks>
+    /// <param name="request">User logout request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <response code="200">Logout successful</response>
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout(
-    [FromBody] LogoutRequest request,
-    CancellationToken cancellationToken)
+        [FromBody] LogoutRequest request,
+        CancellationToken cancellationToken)
     {
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
@@ -119,7 +152,16 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
-
+    /// <summary>
+    /// Refreshes token.
+    /// </summary>
+    /// <remarks>
+    /// This endpoint refreshes token from HttpOnly cookie using AuthService.RefreshTokenAsync.
+    /// Returns 200 on success, or 401 if login fails.
+    /// </remarks>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <response code="200">Refresh token successful</response>
+    /// <response code="401">Refresh token failed</response>
     [HttpPost("refresh")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-strict")]
@@ -164,7 +206,15 @@ public class AuthController : ControllerBase
         return Ok(response);
     }
 
-    //user logout
+    /// <summary>
+    /// Revokes token.
+    /// </summary>
+    /// <remarks>
+    /// This endpoint revokes token from HttpOnly cookie using AuthService.RevokeTokenAsync.
+    /// Returns 200 on success, or 401 if login fails.
+    /// </remarks>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <response code="204">Refresh token successful</response>
     [HttpPost("revoke")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-strict")]
@@ -193,6 +243,14 @@ public class AuthController : ControllerBase
         return StatusCode(StatusCodes.Status204NoContent);
     }
 
+    /// <summary>
+    /// 'who am I?' endpoint. 
+    /// </summary>
+    /// <remarks>
+    /// This is a standard authenticated /me endpoint.
+    /// Returns the identity of the currently logged‑in user based on their JWT claims.
+    /// </remarks>    
+    /// <response code="200">Successful</response>
     [HttpGet("me")]
     [Authorize]
     public ActionResult<CurrentUserDto> Me()

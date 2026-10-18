@@ -5,7 +5,5 @@ public sealed class JwtSettings
     public string Issuer { get; set; } = null!;
     public string Audience { get; set; } = null!;
     public int AccessTokenExpireMinutes { get; set; } = 15;
-    //public int RefreshTokenExpireDays { get; set; } = 7;
-    //public int RefreshTokenCutOffDays { get; set; } = -30;
 }
 

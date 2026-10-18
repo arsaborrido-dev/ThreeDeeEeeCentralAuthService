@@ -6,7 +6,6 @@ public interface ITechnologyService
 {
     Task<ResponseResult<List<TechnologiesListResponse>>> GetAllTechnologiesAsync(
         CancellationToken cancellationToken = default);
-
     Task<ResponseResult<TechnologyResponse>?> GetTechnologyByIdAsync(
         long id,
         CancellationToken cancellationToken = default);

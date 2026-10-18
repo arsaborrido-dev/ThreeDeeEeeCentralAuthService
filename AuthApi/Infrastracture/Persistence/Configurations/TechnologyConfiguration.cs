@@ -2,8 +2,6 @@
 using AuthApi.Domain.Entitities.Portfolio;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using System.Net.Sockets;
-using System.Security.Principal;
 
 namespace AuthApi.Infrastracture.Persistence.Configurations;
 public sealed class TechnologyConfiguration
