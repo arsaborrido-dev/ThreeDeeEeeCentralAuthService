@@ -6,7 +6,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>7e39cb58-f89f-4435-ad61-efacfcad158d</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Domain\Enums\**" />
+    <Content Remove="Domain\Enums\**" />
+    <EmbeddedResource Remove="Domain\Enums\**" />
+    <None Remove="Domain\Enums\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
@@ -31,7 +40,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Domain\Enums\" />
     <Folder Include="Shared\" />
   </ItemGroup>
 

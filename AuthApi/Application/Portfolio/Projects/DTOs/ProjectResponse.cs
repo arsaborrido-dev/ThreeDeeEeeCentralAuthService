@@ -1,4 +1,6 @@
-﻿namespace AuthApi.Application.Portfolio.Projects.DTOs;
+﻿using AuthApi.Application.Helper;
+
+namespace AuthApi.Application.Portfolio.Projects.DTOs;
 public sealed class ProjectResponse
 {
     public long Id { get; init; }
@@ -7,7 +9,11 @@ public sealed class ProjectResponse
     public string LongDescription { get; init; } = string.Empty;
     public string ProjectDemonstration { get; set; } = string.Empty;
     public string? ThumbnailImageUrl { get; init; }
+
+    [HttpsUrl]
     public string? GithubUrl { get; init; }
+
+    [HttpsUrl]
     public string? LiveDemoUrl { get; init; }
     public DateTimeOffset CreatedAtUtc { get; init; }
     public bool IsFeatured { get; init; }

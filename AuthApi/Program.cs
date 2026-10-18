@@ -13,20 +13,25 @@ using AuthApi.Infrastracture.Persistence.Repositories.Portfolio;
 using AuthApi.Infrastracture.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-//using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
 using System.Threading.RateLimiting;
+using System.Reflection;
+
+//-----------------------------------------------------------------------------------------//
+//  SERVICES REGISTRATION
+//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_//
 
 var builder = WebApplication.CreateBuilder(args);
 
 //THIS RESULTS IN OVERRIDING OF DOCKER ENVIRONMENT VARIABLE IF UNCOMMENTED
 //builder.Configuration
 //    .SetBasePath(Directory.GetCurrentDirectory())
-//    .AddJsonFile("Api/appsettings.json", optional: false, reloadOnChange: true)
 //    .AddEnvironmentVariables();
+//    .AddJsonFile("Api/appsettings.json", optional: false, reloadOnChange: true)
+
 
 
 //ASP.NET Core's rate limiter
@@ -79,7 +84,8 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0
+                QueueLimit = 0,
+                AutoReplenishment = true
             });
     });
 
@@ -95,7 +101,8 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = 2,
                 Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0
+                QueueLimit = 0,
+                AutoReplenishment = true
             });
     });
 
@@ -111,7 +118,8 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = 60,
                 Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0
+                QueueLimit = 0,
+                AutoReplenishment = true
             });
     });
     
@@ -238,7 +246,6 @@ builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"))
 builder.Services.Configure<CaptchaSettings>(builder.Configuration.GetSection("Captcha"));
 builder.Services.Configure<RefreshTokenSettings>(builder.Configuration.GetSection("RefreshToken"));
 
-
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
@@ -278,12 +285,23 @@ builder.Services.AddSwaggerGen(options =>
     {
         [new OpenApiSecuritySchemeReference("Bearer", document)] = []
     });
+
+    //this will add the ability to add comments in swagger index page
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+
+    options.IncludeXmlComments(xmlPath);
+
 });
+
+//-----------------------------------------------------------------------------------------//
+//  PROGRAM PIPELINE
+//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_//
 
 var app = builder.Build();
 
-app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseMiddleware<HttpRequestLoggingMiddleware>();
 
 if (!app.Environment.IsDevelopment())
@@ -291,7 +309,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-//app.UseHttpsRedirection(); <-- comment for now until docker container is configured with an HTTPS endpoint/certificate.
+//app.UseHttpsRedirection(); <-- commented for now until docker container is configured with an HTTPS endpoint/certificate.
 //current flow: Browser -> https -> mvcportf -> http -> apiauth -> postgre protocol - postgres
 
 app.UseRouting();

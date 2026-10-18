@@ -18,10 +18,8 @@ public interface IRefreshTokenRepository
         string? ipAddress,
         string? replacementTokenHash,
         CancellationToken cancellationToken = default);
-
     Task CleanupAsync(
         CancellationToken cancellationToken = default);
-
     Task LogSecurityEvent(
         string? userId,
         string eventType,
