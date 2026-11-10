@@ -7,9 +7,16 @@ public interface IRefreshTokenRepository
         //string userId,
         ApplicationUser user,
         string? ipAddress,
-        bool isRefresh = false,
-        RefreshToken? token = null,
+        //bool isRefresh = false,
+        //RefreshToken? token = null,
         CancellationToken cancellationToken = default);
+
+    Task<(string RawToken, RefreshToken Entity)?> RotateAsync(
+        ApplicationUser user,
+        RefreshToken currentToken,
+        string? ipAddress,
+        CancellationToken cancellationToken = default);
+
     Task<RefreshToken?> GetTokenAsync(
         string rawToken,
         CancellationToken cancellationToken = default);

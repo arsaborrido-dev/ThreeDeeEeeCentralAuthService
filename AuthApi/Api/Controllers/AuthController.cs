@@ -119,11 +119,13 @@ public class AuthController : ControllerBase
         //create cookie
         SetRefreshTokenCookie(response.RefreshToken);
 
-        return Ok(new
-        {
-            accessToken = response.AccessToken,
-            expiresAt = response.AccessTokenExpiresAtUtc
-        });
+        return Ok(response);
+
+        //return Ok(new
+        //{
+        //    accessToken = response.AccessToken,
+        //    expiresAt = response.AccessTokenExpiresAtUtc
+        //});
     }
 
     /// <summary>
@@ -139,13 +141,17 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout(
-        [FromBody] LogoutRequest request,
+        //[FromBody] LogoutRequest request,
         CancellationToken cancellationToken)
     {
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        //var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var ipAddress = GetIpAddress();
+
+        var refreshToken = Request.Cookies["refreshToken"];
 
         var result = await _authService.LogoutAsync(
-            request.RefreshToken,
+            //request.RefreshToken,
+            refreshToken!,
             ipAddress ?? string.Empty,
             cancellationToken);
 
@@ -277,8 +283,8 @@ public class AuthController : ControllerBase
             token,
             new CookieOptions
             {
-                HttpOnly = false, //true,
-                Secure = false, //true,
+                HttpOnly = true, //false, //true,
+                Secure = true, //false, //true,
                 SameSite = SameSiteMode.Strict,
                 MaxAge = TimeSpan.FromDays(_tokenSettings.RefreshTokenExpireDays),
                 Path = _tokenSettings.CookiePath //"/api/auth"
