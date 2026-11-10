@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using AuthApi.Domain.Entitities.Portfolio;
+using Microsoft.AspNetCore.Identity;
 
 namespace AuthApi.Domain.Entitities;
 public class ApplicationUser : IdentityUser 
@@ -10,4 +11,5 @@ public class ApplicationUser : IdentityUser
     public DateTimeOffset? DeletedAtUtc { get; set; }
     public ICollection<RefreshToken> RefreshTokens { get; set; }
         = new List<RefreshToken>();
+    public ICollection<Address> Addresses { get; set; } = new List<Address>();
 }

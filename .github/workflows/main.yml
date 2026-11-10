@@ -4,6 +4,7 @@ name: Auth API CI
 on:
   pull_request:
     branches:
+      - staging
       - master
   workflow_dispatch:
 
@@ -30,6 +31,8 @@ jobs:
       - name: Build
         run: dotnet build ThreeDeeEeeCentralAuthService.slnx --configuration Release --no-restore
 
-      - name: Test
-        run: dotnet test ThreeDeeEeeCentralAuthService.slnx --configuration Release --no-build
+      - name: Run unit tests
+        run: dotnet test ThreeDeeEeeCentralAuthService.slnx --configuration Release --no-build --filter "FullyQualifiedName!~PostgreSqlTestFixtureTests"
 
+      - name: Run PostgreSQL integration tests
+        run: dotnet test AuthApi.Tests/AuthApi.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~PostgreSqlTestFixtureTests" --logger "console;verbosity=normal"

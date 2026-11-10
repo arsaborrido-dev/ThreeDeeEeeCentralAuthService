@@ -103,6 +103,50 @@ namespace AuthApi.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.Address", b =>
+                {
+                    b.Property<long>("AddressId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("AddressId"));
+
+                    b.Property<string>("AddressLine1")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTimeOffset?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ZipCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("AddressId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Addresses");
+                });
+
             modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.ContactMessage", b =>
                 {
                     b.Property<long>("ContactMessageId")
@@ -143,6 +187,45 @@ namespace AuthApi.Migrations
                     b.HasKey("ContactMessageId");
 
                     b.ToTable("ContactMessages");
+                });
+
+            modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.Phone", b =>
+                {
+                    b.Property<long>("PhoneId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("PhoneId"));
+
+                    b.Property<string>("AreaCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTimeOffset?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("PhoneId");
+
+                    b.ToTable("Phones");
                 });
 
             modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.Project", b =>
@@ -1072,6 +1155,17 @@ namespace AuthApi.Migrations
                     b.ToTable("ProjectTechnologies", (string)null);
                 });
 
+            modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.Address", b =>
+                {
+                    b.HasOne("AuthApi.Domain.Entitities.ApplicationUser", "User")
+                        .WithMany("Addresses")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.ProjectScreenshot", b =>
                 {
                     b.HasOne("AuthApi.Domain.Entitities.Portfolio.Project", "Project")
@@ -1199,6 +1293,8 @@ namespace AuthApi.Migrations
 
             modelBuilder.Entity("AuthApi.Domain.Entitities.ApplicationUser", b =>
                 {
+                    b.Navigation("Addresses");
+
                     b.Navigation("RefreshTokens");
                 });
 

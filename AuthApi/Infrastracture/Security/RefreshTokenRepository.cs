@@ -20,44 +20,119 @@ public sealed class RefreshTokenRepository : IRefreshTokenRepository
         _context = context;
         _tokenSettings = tokenOptions.Value;
     }
+
     public async Task<(string RawToken, RefreshToken Entity)> CreateAsync(
-        //string userId,
         ApplicationUser user,
         string? ipAddress,
-        bool isRefresh = false,
-        RefreshToken? token = null,
         CancellationToken cancellationToken = default)
     {
         var rawToken = GenerateToken();
 
+        var now = DateTime.UtcNow;
+
         var entity = new RefreshToken
         {
-            //Id = Guid.NewGuid(),
             TokenHash = HashToken(rawToken),
             UserId = user.Id,
-            CreatedAtUtc = DateTime.UtcNow,
-            ExpiresAtUtc = DateTime.UtcNow.AddDays(_tokenSettings.RefreshTokenExpireDays),
+            CreatedAtUtc = now,
+            ExpiresAtUtc = now.AddDays(_tokenSettings.RefreshTokenExpireDays),
             CreatedByIp = ipAddress
         };
 
         _context.RefreshTokens.Add(entity);
-
-        //add token to user
         user.RefreshTokens.Add(entity);
-
-        //revoke previously created token
-        if (isRefresh && token != null)
-        {
-            ////revoke old token
-            token.RevokedAtUtc = DateTime.UtcNow;
-            token.RevokedByIp = ipAddress;
-            token.ReplacedByTokenHash = entity.ReplacedByTokenHash;
-        }
 
         await _context.SaveChangesAsync(cancellationToken);
 
         return (rawToken, entity);
     }
+
+    public async Task<(string RawToken, RefreshToken Entity)?> RotateAsync(
+        ApplicationUser user,
+        RefreshToken currentToken,
+        string? ipAddress,
+        CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+
+        var rawToken = GenerateToken();
+
+        var newToken = new RefreshToken
+        {
+            TokenHash = HashToken(rawToken),
+            UserId = user.Id,
+            CreatedAtUtc = now,
+            ExpiresAtUtc = now.AddDays(_tokenSettings.RefreshTokenExpireDays),
+            CreatedByIp = ipAddress
+        };
+
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync(cancellationToken);
+
+        var affectedRows = await _context.RefreshTokens
+            .Where(t =>
+                t.Id == currentToken.Id &&
+                t.RevokedAtUtc == null &&
+                t.ExpiresAtUtc > now)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(t => t.RevokedAtUtc, now)
+                .SetProperty(t => t.RevokedByIp, ipAddress)
+                .SetProperty(t => t.ReplacedByTokenHash, newToken.TokenHash),
+                cancellationToken);
+
+        if (affectedRows != 1)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return null;
+        }
+
+        _context.RefreshTokens.Add(newToken);
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+
+        return (rawToken, newToken);
+    }
+
+    //public async Task<(string RawToken, RefreshToken Entity)> CreateAsync(
+    //    //string userId,
+    //    ApplicationUser user,
+    //    string? ipAddress,
+    //    bool isRefresh = false,
+    //    RefreshToken? token = null,
+    //    CancellationToken cancellationToken = default)
+    //{
+    //    var rawToken = GenerateToken();
+
+    //    var entity = new RefreshToken
+    //    {
+    //        //Id = Guid.NewGuid(),
+    //        TokenHash = HashToken(rawToken),
+    //        UserId = user.Id,
+    //        CreatedAtUtc = DateTime.UtcNow,
+    //        ExpiresAtUtc = DateTime.UtcNow.AddDays(_tokenSettings.RefreshTokenExpireDays),
+    //        CreatedByIp = ipAddress
+    //    };
+
+    //    _context.RefreshTokens.Add(entity);
+
+    //    //add token to user
+    //    user.RefreshTokens.Add(entity);
+
+    //    //revoke previously created token
+    //    if (isRefresh && token != null)
+    //    {
+    //        ////revoke old token
+    //        token.RevokedAtUtc = DateTime.UtcNow;
+    //        token.RevokedByIp = ipAddress;
+    //        token.ReplacedByTokenHash = entity.ReplacedByTokenHash;
+    //    }
+
+    //    await _context.SaveChangesAsync(cancellationToken);
+
+    //    return (rawToken, entity);
+    //}
     public async Task<RefreshToken?> GetTokenAsync(
         string rawToken,
         CancellationToken cancellationToken = default)
@@ -88,10 +163,18 @@ public sealed class RefreshTokenRepository : IRefreshTokenRepository
     //cleanup unused/old tokens
     public async Task CleanupAsync(CancellationToken cancellationToken = default)
     {
-        var cutoff = DateTime.UtcNow.AddDays(_tokenSettings.RefreshTokenCutOffDays);
+        //var cutoff = DateTime.UtcNow.AddDays(_tokenSettings.RefreshTokenCutOffDays);
+
+        //var tokens = _context.RefreshTokens
+        //    .Where(t => !t.IsActive && t.RevokedAtUtc < cutoff || t.ExpiresAtUtc < DateTime.UtcNow);
+
+        var now = DateTime.UtcNow;
+        var cutoff = now.AddDays(_tokenSettings.RefreshTokenCutOffDays);
 
         var tokens = _context.RefreshTokens
-            .Where(t => !t.IsActive && t.RevokedAtUtc < cutoff || t.ExpiresAtUtc < DateTime.UtcNow);
+            .Where(t =>
+                (t.RevokedAtUtc != null && t.RevokedAtUtc < cutoff) ||
+                t.ExpiresAtUtc < now);
 
         _context.RefreshTokens.RemoveRange(tokens);
 

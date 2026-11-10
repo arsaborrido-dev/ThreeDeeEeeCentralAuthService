@@ -3,4 +3,5 @@ public sealed record ResponseToken(
     string AccessToken,
     DateTimeOffset AccessTokenExpiresAtUtc,
     string RefreshToken,
-    DateTimeOffset RefreshTokenExpiresAtUtc);
+    DateTimeOffset RefreshTokenExpiresAtUtc,
+    string UserId);
