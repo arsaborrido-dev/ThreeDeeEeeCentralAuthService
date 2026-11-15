@@ -41,6 +41,21 @@ public sealed class ProjectConfiguration
             .IsRequired()
             .HasDefaultValue(false);
 
+        builder.Property(p => p.UpdatedAtUtc)
+            .IsRequired()
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        //builder.HasOne(p => p.User)
+        //     .WithMany()
+        //     .HasForeignKey(p => p.UserId)
+        //     .IsRequired()
+        //     .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(p => p.User)
+            .WithMany()
+            .HasForeignKey(p => p.UserId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasMany(p => p.Skills)
             .WithMany(s => s.Projects)
             .UsingEntity(ps => ps.ToTable("ProjectSkills"));
@@ -48,6 +63,9 @@ public sealed class ProjectConfiguration
         builder.HasMany(p => p.Technologies)
             .WithMany(t => t.Projects)
             .UsingEntity(pt => pt.ToTable("ProjectTechnologies"));
+
+
+     
 
         // -------------------------
         // SEED DATA: PROJECTS

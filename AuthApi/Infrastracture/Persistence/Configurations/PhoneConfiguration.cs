@@ -26,5 +26,16 @@ public class PhoneConfiguration : IEntityTypeConfiguration<Phone>
 
         builder.Property(x => x.UpdatedAtUtc)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        //builder.HasOne(p => p.User)
+        //    .WithMany(u => u.Phones)
+        //    .HasForeignKey(p => p.UserId)
+        //    .IsRequired()
+        //    .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(p => p.User)
+            .WithMany(u => u.Phones)
+            .HasForeignKey(p => p.UserId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

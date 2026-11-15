@@ -10,13 +10,15 @@ public class Project : SoftDeletableEntity
     public string? ThumbnailImageUrl { get; set; }
     public string? GitHubUrl { get; set; }
     public string? LiveDemoUrl { get; set; }
-    public DateTimeOffset CreatedAtUtc { get; set; }
+    public string? UserId { get; set; } 
+    public ApplicationUser? User { get; set; }  
     public bool IsFeatured { get; set; }
+    public DateTimeOffset CreatedAtUtc { get; set; }
+    public DateTimeOffset UpdatedAtUtc { get; set; }
     public ICollection<ProjectScreenshot> Screenshots { get; set; }
-        = new List<ProjectScreenshot>();
+    = new List<ProjectScreenshot>();
     public ICollection<Skill> Skills { get; set; }
         = new List<Skill>();
     public ICollection<Technology> Technologies { get; set; }
         = new List<Technology>();
-
 }    
