@@ -294,7 +294,11 @@ public class AuthService : IAuthService
             _logger.LogWarning(
                 "[AuthService:RefreshTokenAsync] - User email is not confirmed.");
 
-            //what happens to refresh token if user state changes???
+            await _tokenRepository.RevokeAsync(
+              token,
+              ipAddress,
+              replacementTokenHash: null,
+              cancellationToken);
 
             return ResponseResult<ResponseToken>.Failure(
                 "INVALID_REFRESH_TOKEN",
@@ -408,11 +412,11 @@ public class AuthService : IAuthService
     //}
 
     private async Task<ResponseToken> CreateTokenResponseAsync(
-    ApplicationUser user,
-    CancellationToken cancellationToken,
-    string? ipAddress,
-    bool isRefresh = false,
-    RefreshToken? token = null)
+        ApplicationUser user,
+        CancellationToken cancellationToken,
+        string? ipAddress,
+        bool isRefresh = false,
+        RefreshToken? token = null)
     {
         var roles = await _userManager.GetRolesAsync(user);
 

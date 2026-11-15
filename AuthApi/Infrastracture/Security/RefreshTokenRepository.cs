@@ -66,34 +66,91 @@ public sealed class RefreshTokenRepository : IRefreshTokenRepository
             CreatedByIp = ipAddress
         };
 
-        await using var transaction =
-            await _context.Database.BeginTransactionAsync(cancellationToken);
+        // Execute the entire transaction using EF Core's retry strategy.
+        var strategy = _context.Database.CreateExecutionStrategy();
 
-        var affectedRows = await _context.RefreshTokens
-            .Where(t =>
-                t.Id == currentToken.Id &&
-                t.RevokedAtUtc == null &&
-                t.ExpiresAtUtc > now)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(t => t.RevokedAtUtc, now)
-                .SetProperty(t => t.RevokedByIp, ipAddress)
-                .SetProperty(t => t.ReplacedByTokenHash, newToken.TokenHash),
-                cancellationToken);
+        return await strategy.ExecuteAsync<
+            (string RawToken, RefreshToken Entity)?>(async () =>
+            {
+                await using var transaction =
+                await _context.Database.BeginTransactionAsync(
+                    cancellationToken);
 
-        if (affectedRows != 1)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            return null;
-        }
+                var affectedRows = await _context.RefreshTokens
+                .Where(t =>
+                    t.Id == currentToken.Id &&
+                    t.RevokedAtUtc == null &&
+                    t.ExpiresAtUtc > now)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(t => t.RevokedAtUtc, now)
+                    .SetProperty(t => t.RevokedByIp, ipAddress)
+                    .SetProperty(t => t.ReplacedByTokenHash, newToken.TokenHash),
+                    cancellationToken);
 
-        _context.RefreshTokens.Add(newToken);
+                // Ensure only one request can rotate this refresh token.
+                if (affectedRows != 1)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return null;
+                }
 
-        await _context.SaveChangesAsync(cancellationToken);
+                _context.RefreshTokens.Add(newToken);
 
-        await transaction.CommitAsync(cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
 
-        return (rawToken, newToken);
+                await transaction.CommitAsync(cancellationToken);
+
+                return (rawToken, newToken);
+            });
     }
+
+    //public async Task<(string RawToken, RefreshToken Entity)?> RotateAsync(
+    //    ApplicationUser user,
+    //    RefreshToken currentToken,
+    //    string? ipAddress,
+    //    CancellationToken cancellationToken = default)
+    //{
+    //    var now = DateTime.UtcNow;
+
+    //    var rawToken = GenerateToken();
+
+    //    var newToken = new RefreshToken
+    //    {
+    //        TokenHash = HashToken(rawToken),
+    //        UserId = user.Id,
+    //        CreatedAtUtc = now,
+    //        ExpiresAtUtc = now.AddDays(_tokenSettings.RefreshTokenExpireDays),
+    //        CreatedByIp = ipAddress
+    //    };
+
+    //    await using var transaction =
+    //        await _context.Database.BeginTransactionAsync(cancellationToken);
+
+    //    var affectedRows = await _context.RefreshTokens
+    //        .Where(t =>
+    //            t.Id == currentToken.Id &&
+    //            t.RevokedAtUtc == null &&
+    //            t.ExpiresAtUtc > now)
+    //        .ExecuteUpdateAsync(setters => setters
+    //            .SetProperty(t => t.RevokedAtUtc, now)
+    //            .SetProperty(t => t.RevokedByIp, ipAddress)
+    //            .SetProperty(t => t.ReplacedByTokenHash, newToken.TokenHash),
+    //            cancellationToken);
+
+    //    if (affectedRows != 1)
+    //    {
+    //        await transaction.RollbackAsync(cancellationToken);
+    //        return null;
+    //    }
+
+    //    _context.RefreshTokens.Add(newToken);
+
+    //    await _context.SaveChangesAsync(cancellationToken);
+
+    //    await transaction.CommitAsync(cancellationToken);
+
+    //    return (rawToken, newToken);
+    //}
 
     //public async Task<(string RawToken, RefreshToken Entity)> CreateAsync(
     //    //string userId,

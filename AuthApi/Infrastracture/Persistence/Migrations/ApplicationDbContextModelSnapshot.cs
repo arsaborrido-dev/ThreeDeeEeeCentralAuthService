@@ -223,7 +223,12 @@ namespace AuthApi.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
                     b.HasKey("PhoneId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Phones");
                 });
@@ -280,7 +285,17 @@ namespace AuthApi.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
                     b.HasKey("ProjectId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Projects");
 
@@ -297,7 +312,8 @@ namespace AuthApi.Migrations
                             ProjectDemonstration = "",
                             ShortDescription = "A personal portfolio built with ASP.NET MVC.",
                             ThumbnailImageUrl = "/images/projects/portfolio-thumb.png",
-                            Title = "Portfolio Website"
+                            Title = "Portfolio Website",
+                            UpdatedAtUtc = new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
                         },
                         new
                         {
@@ -311,7 +327,8 @@ namespace AuthApi.Migrations
                             ProjectDemonstration = "",
                             ShortDescription = "Interactive dashboard for sales analytics.",
                             ThumbnailImageUrl = "/images/projects/powerbi-thumb.png",
-                            Title = "Power BI Sales Dashboard"
+                            Title = "Power BI Sales Dashboard",
+                            UpdatedAtUtc = new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
                         });
                 });
 
@@ -1166,6 +1183,26 @@ namespace AuthApi.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.Phone", b =>
+                {
+                    b.HasOne("AuthApi.Domain.Entitities.ApplicationUser", "User")
+                        .WithMany("Phones")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.Project", b =>
+                {
+                    b.HasOne("AuthApi.Domain.Entitities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("AuthApi.Domain.Entitities.Portfolio.ProjectScreenshot", b =>
                 {
                     b.HasOne("AuthApi.Domain.Entitities.Portfolio.Project", "Project")
@@ -1294,6 +1331,8 @@ namespace AuthApi.Migrations
             modelBuilder.Entity("AuthApi.Domain.Entitities.ApplicationUser", b =>
                 {
                     b.Navigation("Addresses");
+
+                    b.Navigation("Phones");
 
                     b.Navigation("RefreshTokens");
                 });
