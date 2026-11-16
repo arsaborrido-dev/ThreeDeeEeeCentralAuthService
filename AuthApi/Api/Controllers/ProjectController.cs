@@ -76,7 +76,6 @@ public sealed class ProjectController : ControllerBase
     // GET /api/projects/5
     [HttpGet("{id:long:min(1)}")]
     [EnableRateLimiting("api-moderate")]
-    [Authorize]
     public async Task<ActionResult<ProjectResponse>> GetProjectById(
         long id,
         CancellationToken cancellationToken)
