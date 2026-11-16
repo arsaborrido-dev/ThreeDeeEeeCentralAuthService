@@ -68,3 +68,5 @@ secrets/
 
 # Node modules (if using frontend)
 node_modules/
+
+/publish-check/

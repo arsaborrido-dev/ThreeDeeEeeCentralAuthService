@@ -12,4 +12,7 @@ public interface IProjectService
     Task<ResponseResult<ProjectResponse>?> GetProjectByIdAsync(
         long id,
         CancellationToken cancellationToken = default);
+    Task<ProjectResponse> AddProjectAsync(ProjectResponse projDto, CancellationToken cancellationToken = default);
+    Task<bool> UpdateProjectAsync(ProjectResponse projDto, CancellationToken cancellationToken = default);
+    Task<bool> DeleteProjectAsync(long id, CancellationToken cancellationToken = default);
 }

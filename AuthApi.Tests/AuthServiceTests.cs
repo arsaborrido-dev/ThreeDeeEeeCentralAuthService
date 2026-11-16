@@ -84,9 +84,37 @@ public class AuthServiceTests
         };
     }
 
-    private void SetupSuccessfulTokenCreation(
-        ApplicationUser user,
-        RefreshToken? previousToken = null)
+    //private void SetupSuccessfulTokenCreation(
+    //    ApplicationUser user,
+    //    RefreshToken? previousToken = null)
+    //{
+    //    _userManager
+    //        .Setup(x => x.GetRolesAsync(user))
+    //        .ReturnsAsync(new List<string> { "User" });
+
+    //    _jwtService
+    //        .Setup(x => x.GenerateAccessToken(
+    //            It.IsAny<IEnumerable<System.Security.Claims.Claim>>()))
+    //        .Returns("test-access-token");
+
+    //    _tokenRepository
+    //        .Setup(x => x.CreateAsync(
+    //            user,
+    //            It.IsAny<string?>(),
+    //            It.IsAny<bool>(),
+    //            It.IsAny<RefreshToken?>(),
+    //            It.IsAny<CancellationToken>()))
+    //        .ReturnsAsync((
+    //            "new-raw-refresh-token",
+    //            new RefreshToken
+    //            {
+    //                UserId = user.Id,
+    //                CreatedByIp = IpAddress,
+    //                ExpiresAtUtc = DateTime.UtcNow.AddDays(7)
+    //            }));
+    //}
+
+    private void SetupSuccessfulTokenCreation(ApplicationUser user)
     {
         _userManager
             .Setup(x => x.GetRolesAsync(user))
@@ -101,8 +129,35 @@ public class AuthServiceTests
             .Setup(x => x.CreateAsync(
                 user,
                 It.IsAny<string?>(),
-                It.IsAny<bool>(),
-                It.IsAny<RefreshToken?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((
+                "new-raw-refresh-token",
+                new RefreshToken
+                {
+                    UserId = user.Id,
+                    CreatedByIp = IpAddress,
+                    ExpiresAtUtc = DateTime.UtcNow.AddDays(7)
+                }));
+    }
+
+    private void SetupSuccessfulTokenRotation(
+        ApplicationUser user,
+        RefreshToken currentToken)
+    {
+        _userManager
+            .Setup(x => x.GetRolesAsync(user))
+            .ReturnsAsync(new List<string> { "User" });
+
+        _jwtService
+            .Setup(x => x.GenerateAccessToken(
+                It.IsAny<IEnumerable<System.Security.Claims.Claim>>()))
+            .Returns("test-access-token");
+
+        _tokenRepository
+            .Setup(x => x.RotateAsync(
+                user,
+                currentToken,
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((
                 "new-raw-refresh-token",
@@ -274,8 +329,6 @@ public class AuthServiceTests
             x => x.CreateAsync(
                 It.IsAny<ApplicationUser>(),
                 It.IsAny<string?>(),
-                It.IsAny<bool>(),
-                It.IsAny<RefreshToken?>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -310,8 +363,6 @@ public class AuthServiceTests
             x => x.CreateAsync(
                 user,
                 IpAddress,
-                false,
-                null,
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -488,7 +539,7 @@ public class AuthServiceTests
 
         _tokenRepository.Verify(
             x => x.LogSecurityEvent(
-                token.CreatedByIp,
+                token.UserId,
                 "REVOKED_TOKEN_USED",
                 IpAddress,
                 "Revoked refresh token reuse"),
@@ -516,7 +567,7 @@ public class AuthServiceTests
 
         _tokenRepository.Verify(
             x => x.LogSecurityEvent(
-                token.CreatedByIp,
+                token.UserId,
                 "IP_ADDRESS_MISMATCHED",
                 "192.0.2.99",
                 "Refresh token IP address mismatch"),
@@ -550,7 +601,7 @@ public class AuthServiceTests
 
         _tokenRepository.Verify(
             x => x.LogSecurityEvent(
-                token.CreatedByIp,
+                token.UserId,
                 "INVALID_TOKEN_USER",
                 IpAddress,
                 "Refresh token references a non-existent user"),
@@ -584,11 +635,10 @@ public class AuthServiceTests
         Assert.False(result.Succeeded);
 
         _tokenRepository.Verify(
-            x => x.CreateAsync(
+            x => x.RotateAsync(
                 It.IsAny<ApplicationUser>(),
+                It.IsAny<RefreshToken>(),
                 It.IsAny<string?>(),
-                It.IsAny<bool>(),
-                It.IsAny<RefreshToken?>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -613,7 +663,8 @@ public class AuthServiceTests
             .Setup(x => x.IsEmailConfirmedAsync(user))
             .ReturnsAsync(true);
 
-        SetupSuccessfulTokenCreation(user, token);
+        //SetupSuccessfulTokenCreation(user, token);
+        SetupSuccessfulTokenRotation(user, token);
 
         var result = await _authService.RefreshTokenAsync(
             RefreshTokenValue, IpAddress, CancellationToken.None);
@@ -622,11 +673,10 @@ public class AuthServiceTests
         Assert.True(result.Succeeded);
 
         _tokenRepository.Verify(
-            x => x.CreateAsync(
+            x => x.RotateAsync(
                 user,
-                IpAddress,
-                true,
                 token,
+                IpAddress,
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

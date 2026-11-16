@@ -1,5 +1,7 @@
 ﻿
 namespace AuthApi.Application.Common.Models;
+
+//standard service responses
 public record ResponseResult
 {
     public bool Succeeded { get; init; }

@@ -2,7 +2,9 @@ using AuthApi.Api.Middleware;
 using AuthApi.Application.Auth;
 using AuthApi.Application.Common.Interfaces;
 using AuthApi.Application.Common.Models;
+using AuthApi.Application.Portfolio.Address;
 using AuthApi.Application.Portfolio.Contacts;
+using AuthApi.Application.Portfolio.Phone;
 using AuthApi.Application.Portfolio.Projects;
 using AuthApi.Application.Portfolio.Skills;
 using AuthApi.Application.Portfolio.Technologies;
@@ -16,9 +18,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using System.Reflection;
 using System.Text;
 using System.Threading.RateLimiting;
-using System.Reflection;
 
 //-----------------------------------------------------------------------------------------//
 //  SERVICES REGISTRATION
@@ -89,6 +91,23 @@ builder.Services.AddRateLimiter(options =>
             });
     });
 
+    options.AddPolicy("auth-moderate", httpContext =>
+    {
+        var ip =
+            httpContext.Connection.RemoteIpAddress?.ToString()
+            ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ip,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            });
+    });
+
     options.AddPolicy("api-strict", httpContext =>
     {
         var ip =
@@ -99,7 +118,7 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: ip,
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 2,
+                PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
                 AutoReplenishment = true
@@ -228,6 +247,11 @@ builder.Services.AddHttpClient<ICaptchaValidator, CaptchaValidator>(client =>
 });
 
 builder.Services.AddAuthorization();
+//builder.Services.AddAuthorization(options =>
+//{
+//    options.AddPolicy("AdminOnly", policy =>
+//        policy.RequireRole("Admin"));
+//});
 
 //CORS (Cross-Origin Resource Sharing)
 builder.Services.AddCors(options =>
@@ -235,7 +259,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy("MvcPortFApp", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5010") // for docker mvc portfolio
+            .WithOrigins(
+                "https://chaosaborrido.up.railway.app",
+                "http://localhost:5010") // for docker mvc portfolio
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -260,6 +286,12 @@ builder.Services.AddScoped<ITechnologyService, TechnologyService>();
 
 builder.Services.AddScoped<IContactService, ContactService>();
 builder.Services.AddScoped<IContactRepository, ContactRepository>();
+
+builder.Services.AddScoped<IAddressService, AddressService>();
+builder.Services.AddScoped<IAddressRepository, AddressRepository>();
+
+builder.Services.AddScoped<IPhoneService, PhoneService>();
+builder.Services.AddScoped<IPhoneRepository, PhoneRepository>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 
@@ -300,6 +332,11 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+//check/confirm environment
+app.Logger.LogInformation(
+    "Environment name: {EnvironmentName}",
+    app.Environment.EnvironmentName);
+
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseMiddleware<HttpRequestLoggingMiddleware>();
@@ -329,11 +366,11 @@ if (app.Environment.IsDevelopment())
 app.MapHealthChecks("/health");
 app.MapControllers();
 
-if (app.Environment.IsDevelopment())
-{
-    //seed only in development
-    await SeedDatabaseAsync(app);
-}
+//if (app.Environment.IsDevelopment())
+//{
+//    //seed only in development
+//    await SeedDatabaseAsync(app);
+//}
 
 app.Run();
 static async Task SeedDatabaseAsync(WebApplication app)
@@ -344,6 +381,15 @@ static async Task SeedDatabaseAsync(WebApplication app)
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
+
+        var connection = context.Database.GetDbConnection();
+
+        //check which database the migration process is connecting to
+        logger.LogInformation(
+            "Migration target: Server={Server}; Database={Database}",
+            connection.DataSource,
+            connection.Database);
+
         logger.LogInformation("Applying migrations...");
         await context.Database.MigrateAsync();
 

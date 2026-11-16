@@ -1,5 +1,4 @@
 ﻿using AuthApi.Application.Portfolio.Projects.DTOs;
-using AuthApi.Domain.Entitities.Portfolio;
 
 namespace AuthApi.Application.Portfolio.Projects;
 public interface IProjectRepository
@@ -11,4 +10,7 @@ public interface IProjectRepository
         CancellationToken cancellationToken = default);
     Task<List<ProjectResponse>> GetFeaturedProjectsAsync(
         CancellationToken cancellationToken = default);
+    Task<ProjectResponse> AddProjectAsync(ProjectResponse projDto, CancellationToken cancellationToken = default);
+    Task<bool> UpdateProjectAsync(ProjectResponse projDto, CancellationToken cancellationToken = default);
+    Task<bool> SoftDeleteProjectAsync(long id, CancellationToken cancellationToken = default);
 }

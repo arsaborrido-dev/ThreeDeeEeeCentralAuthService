@@ -31,4 +31,16 @@ public sealed class ProjectService : IProjectService
 
         return ResponseResult<ProjectResponse>.Success(response);
     }
+    public async Task<bool> UpdateProjectAsync(ProjectResponse projDto, CancellationToken cancellationToken = default)
+    {
+        return await _projectRepository.UpdateProjectAsync(projDto, cancellationToken);
+    }
+    public async Task<ProjectResponse> AddProjectAsync(ProjectResponse projDto, CancellationToken cancellationToken = default)
+    {
+        return await _projectRepository.AddProjectAsync(projDto, cancellationToken);
+    }
+    public async Task<bool> DeleteProjectAsync(long id, CancellationToken cancellationToken = default)
+    {
+        return await _projectRepository.SoftDeleteProjectAsync(id, cancellationToken);
+    }
 }    

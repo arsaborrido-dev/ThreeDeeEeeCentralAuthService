@@ -23,11 +23,19 @@ public class HttpRequestLoggingMiddleware
         {
             stopwatch.Stop();
 
+            //_logger.LogInformation(
+            //    "<- {StatusCode} {Method} {Path} ({ElapsedMs}ms)",
+            //    context.Response.StatusCode,
+            //    context.Request.Method,
+            //    context.Request.Path,
+            //    stopwatch.ElapsedMilliseconds);
+
             _logger.LogInformation(
-                "<- {StatusCode} {Method} {Path} ({ElapsedMs}ms)",
+                "<- {StatusCode} {Method} {Path} | IP: {RemoteIpAddress} ({ElapsedMs}ms)",
                 context.Response.StatusCode,
                 context.Request.Method,
                 context.Request.Path,
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 stopwatch.ElapsedMilliseconds);
         }
     }

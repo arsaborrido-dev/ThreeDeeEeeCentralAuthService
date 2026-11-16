@@ -2,10 +2,8 @@
 using AuthApi.Domain;
 using AuthApi.Domain.Entitities;
 using AuthApi.Domain.Entitities.Portfolio;
-using AuthApi.Infrastracture.Persistence.Configurations;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection.Emit;
 using System.Reflection;
 
 namespace AuthApi.Infrastracture.Persistence;
@@ -20,7 +18,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Technology> Technologies { get; set; }
     public DbSet<ProjectScreenshot> ProjectScreenshots { get; set; }
     public DbSet<ContactMessage> ContactMessages { get; set; }
-
+    public DbSet<Address> Addresses { get; set; }
+    public DbSet<Phone> Phones { get; set; }
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -43,11 +42,53 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             }
         }
     }
+
+    //this will automatically exclude all records that were soft-deleted
     private static void ApplySoftDeleteFilter<TEntity>(
         ModelBuilder modelBuilder)
     where TEntity : class, ISoftDeletable
     {
         modelBuilder.Entity<TEntity>()
             .HasQueryFilter(x => !x.IsDeleted);
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        UpdateAuditTimestamps();
+
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default)
+    {
+        UpdateAuditTimestamps();
+
+        return base.SaveChangesAsync(
+            acceptAllChangesOnSuccess,
+            cancellationToken);
+    }
+
+    private void UpdateAuditTimestamps()
+    {
+        var utcNow = DateTimeOffset.UtcNow;
+
+        var entries = ChangeTracker
+            .Entries<IAuditableEntity>();
+
+        foreach (var entry in entries)
+        {
+            if (entry.State == EntityState.Added)
+            {
+                entry.Entity.CreatedAtUtc = utcNow;
+                entry.Entity.UpdatedAtUtc = utcNow;
+            }
+            else if (entry.State == EntityState.Modified)
+            {
+                entry.Property(x => x.CreatedAtUtc).IsModified = false;
+                entry.Entity.UpdatedAtUtc = utcNow;
+            }
+        }
     }
 }
